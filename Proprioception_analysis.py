@@ -5,42 +5,42 @@ Created on Tue Aug 07 05:15:18 2018
 @author: Yuri Sugano
 """
 
-
+# Get directory and files to be processed
 directory = raw_input('Where are the files stored?')
 First_trial_number = input('ID of first subject to be analyzed: ')
 Last_trial_number = input('ID of last subject to be analyzed: ')
 
-
+# Import needed packages
 import os
 import csv
-
-
-os.chdir(directory)
-
 import numpy as np
 import pandas as pd
 
-# Create output files
+os.chdir(directory)
 
+# Create output files
 Output_ID = {}
 Stats_ID = {}
 Zone_ID = {}
 Conditions = ['Open','Closed']
 
-# Loop through all the selected trials
 
+# Loop through all the selected trials
 for x in xrange(First_trial_number,Last_trial_number+1):
 
+    # Create subject dictionaries, reset them before next loop
     SubectID = df.iloc[30,1]
     Output_subject = {}
     Stats_subject = {}
     Zone_subject = {}
     
-            
+    #Analyze both conditions for each subject            
     for condition in Conditions:
+        # Load .csv file from subject
         which_file = Conditions.index(condition) + 1
         df = pd.read_csv('{}_{}.csv'.format(x,which_file))
-        # Create output for eyes open
+        
+        # Process Ethovision outputs to correct for subject center
         length = df.shape[0]
         temp = df.iloc[37:length, [0,2,3]]
         temp.columns = ['Time','X','Y']
@@ -50,10 +50,13 @@ for x in xrange(First_trial_number,Last_trial_number+1):
         Ypos = np.array(pd.to_numeric(temp.Y))
         Ypos = Ypos - Ypos[0]
         time = np.array(pd.to_numeric(temp.Time))
+        
+        # Get movement from previous frame
         Xdiff = np.diff(Xpos)
         Ydiff = np.diff(Ypos)
         vector_length = np.sqrt(Ydiff ** 2 + Xdiff ** 2)
         
+        # Calculate relevant metrics
         Max_up = max(Ypos)
         Max_down = min(Ypos)
         Max_right = min(Xpos)
@@ -78,11 +81,13 @@ for x in xrange(First_trial_number,Last_trial_number+1):
         X_variance = np.var(Xpos)
         Y_variance = np.var(Ypos)
         
+        # Calculate percentage of time in quadrants
         Q1 = sum((Xpos > 0) & (Ypos >= 0)) / float(len(Xpos))
         Q2 = sum((Xpos <= 0) & (Ypos > 0)) / float(len(Xpos))
         Q3 = sum((Xpos < 0) & (Ypos <= 0)) / float(len(Xpos)) 
         Q4 = sum((Xpos >= 0) & (Ypos < 0)) / float(len(Xpos))
         
+        # Store outputs
         Output = np.column_stack((time,Xpos,Ypos))
         Output_stats = np.array([Total_excursion, Mean_difference_x, 
                                    Mean_difference_y, Mean_distance_to_center,
@@ -93,17 +98,19 @@ for x in xrange(First_trial_number,Last_trial_number+1):
                                    Final_angle_deg, X_variance, Y_variance,
                                    Q1, Q2, Q3, Q4])
         
+        # Calculate percentage of time in concentric zones, radius = 5mm
         Zone_percentage_5mm = list()
         for i in range (0,40):
             pct = sum((distance_to_center < float(i) / 2) / float(len(distance_to_center)))
             Zone_percentage_5mm.append(pct)
         
-        Zone_percentage0mm = list()    
-        for i in range (0,20):
-            pct = sum((distance_to_center < float(i)) / float(len(distance_to_center)))
-            Zone_percentage0mm.append(pct)
+#        # Calculate percentage of time in concentric zones, radius = 10mm
+#        Zone_percentage10mm = list()    
+#        for i in range (0,20):
+#            pct = sum((distance_to_center < float(i)) / float(len(distance_to_center)))
+#            Zone_percentage10mm.append(pct)
            
-        ### Organize output of raw data      
+        # Organize output of raw data      
         Output_fieldnames = ['time', 'X1', 'Y1']    
         Output = {key: None for key in Output_fieldnames}
         Output['time'] = time
@@ -113,7 +120,7 @@ for x in xrange(First_trial_number,Last_trial_number+1):
         Output_subject[condition] = Output                 
         Output_ID['%s' %x] = Output_subject
         
-        ### Organize statistical outputs
+        # Organize statistical outputs
         statistics = ['Excursion', 'MeanDiffX', 'MeanDiffY', 'MeanDiffCenter',
                       'MaxUp', 'MaxDown', 'MaxRight', 'MaxLeft', 'RangeX', 
                       'RangeY', 'FinalX','FinalY','FinalPos','FinalAngleRad',
@@ -125,7 +132,7 @@ for x in xrange(First_trial_number,Last_trial_number+1):
         Stats_subject[condition] = Stats
         Stats_ID['%s' %x] = Stats_subject
         
-        ### Organize zone output    
+        # Organize zone output    
         Zone = {}
         for index in range(0,40):
             Zone['Z%s' %index] = round(Zone_percentage_5mm[index],3)
