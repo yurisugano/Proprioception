@@ -11,7 +11,7 @@ First_trial_number = input('ID of first subject to be analyzed: ')
 Last_trial_number = input('ID of last subject to be analyzed: ')
 
 # Manually change optional settings
-Zones_to_display = 2o   # Only if zones are displayed as list
+Zones_to_display = 20   # Only if zones are displayed as list
 Zone_radius = .5       # Radius of concentric circle
 
 # Import needed packages
