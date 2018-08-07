@@ -111,6 +111,18 @@ for x in xrange(First_trial_number,Last_trial_number+1):
             pct = sum((distance_to_center < float(i) * Zone_radius) / \
                       float(len(distance_to_center)))
             Zone_percentage.append(pct)
+
+        # Calculate percentage of time in concentric zones, radius = 5mm
+        Zone_percentage_5mm = list()
+        for i in range (0,40):
+            pct = sum((distance_to_center < float(i) / 2) / float(len(distance_to_center)))
+            Zone_percentage_5mm.append(pct)
+        
+#        # Calculate percentage of time in concentric zones, radius = 10mm
+#        Zone_percentage10mm = list()    
+#        for i in range (0,20):
+#            pct = sum((distance_to_center < float(i)) / float(len(distance_to_center)))
+#            Zone_percentage10mm.append(pct)
            
         # Organize output of raw data      
         Output_fieldnames = ['time', 'X1', 'Y1']    
@@ -133,7 +145,7 @@ for x in xrange(First_trial_number,Last_trial_number+1):
             Stats[statistics[index]] = round(Output_stats[index],2)
         Stats_subject[condition] = Stats
         Stats_ID[x] = Stats_subject
-        
+
 #        # Organize zone output (IF LIST)    
 #        Zone = []
 #        for index in range(0,len(Zone_percentage)):
