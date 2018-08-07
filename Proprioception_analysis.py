@@ -10,11 +10,16 @@ directory = raw_input('Where are the files stored?')
 First_trial_number = input('ID of first subject to be analyzed: ')
 Last_trial_number = input('ID of last subject to be analyzed: ')
 
+# Manually change optional settings
+Zones_to_display = 20   # Only if zones are displayed as list
+Zone_radius = .5       # Radius of concentric circle
+
 # Import needed packages
 import os
 import csv
 import numpy as np
 import pandas as pd
+from collections import OrderedDict
 
 os.chdir(directory)
 
@@ -73,7 +78,8 @@ for x in xrange(First_trial_number,Last_trial_number+1):
         
         Final_x_excursion = np.sum(Xdiff)
         Final_y_excursion = np.sum(Ydiff)
-        Final_excursion = np.sqrt(Final_x_excursion ** 2 + Final_y_excursion ** 2)
+        Final_excursion = np.sqrt(Final_x_excursion ** 2 + \
+                                  Final_y_excursion ** 2)
         
         Final_angle_rad = np.arctan(Final_y_excursion / Final_x_excursion)
         Final_angle_deg = np.degrees(Final_angle_rad)
@@ -98,6 +104,14 @@ for x in xrange(First_trial_number,Last_trial_number+1):
                                    Final_angle_deg, X_variance, Y_variance,
                                    Q1, Q2, Q3, Q4])
         
+        # Calculate percentage of time in concentric zones
+        # (define radius of the zones on Zone_radius on line 16)
+        Zone_percentage = list()    
+        for i in range (0,int(20/Zone_radius)):
+            pct = sum((distance_to_center < float(i) * Zone_radius) / \
+                      float(len(distance_to_center)))
+            Zone_percentage.append(pct)
+
         # Calculate percentage of time in concentric zones, radius = 5mm
         Zone_percentage_5mm = list()
         for i in range (0,40):
@@ -130,11 +144,20 @@ for x in xrange(First_trial_number,Last_trial_number+1):
         for index in range(0,15):
             Stats[statistics[index]] = round(Output_stats[index],2)
         Stats_subject[condition] = Stats
-        Stats_ID['%s' %x] = Stats_subject
-        
+        Stats_ID[x] = Stats_subject
+
+#        # Organize zone output (IF LIST)    
+#        Zone = []
+#        for index in range(0,len(Zone_percentage)):
+#            next_zone = round(Zone_percentage[index],3)
+#            Zone.append(next_zone)
+#        Zone_subject[condition] = Zone[1:Zones_to_display]
+#        Zone_ID[x] = Zone_subject
+
         # Organize zone output    
         Zone = {}
-        for index in range(0,40):
-            Zone['Z%s' %index] = round(Zone_percentage_5mm[index],3)
+        for index in range(0,len(Zone_percentage)):
+            Zone[index] = round(Zone_percentage[index],3)
         Zone_subject[condition] = Zone
-        Zone_ID['%s' %x] = Zone_subject
+        Zone_ID[x] = Zone_subject
+
