@@ -13,6 +13,7 @@ Last_trial_number = input('ID of last subject to be analyzed: ')
 # Manually change optional settings
 Zones_to_display = 20   # Only if zones are displayed as list
 Zone_radius = .5       # Radius of concentric circle
+Create_output = (False)
 
 # Import needed packages
 import os
@@ -34,7 +35,6 @@ Conditions = ['Open','Closed']
 for x in xrange(First_trial_number,Last_trial_number+1):
 
     # Create subject dictionaries, reset them before next loop
-    SubectID = df.iloc[30,1]
     Output_subject = {}
     Stats_subject = {}
     Zone_subject = {}
@@ -44,17 +44,22 @@ for x in xrange(First_trial_number,Last_trial_number+1):
         # Load .csv file from subject
         which_file = Conditions.index(condition) + 1
         df = pd.read_csv('{}_{}.csv'.format(x,which_file))
+        SubectID = df.iloc[30,1]
         
         # Process Ethovision outputs to correct for subject center
         length = df.shape[0]
         temp = df.iloc[37:length, [0,2,3]]
         temp.columns = ['Time','X','Y']
-        temp = temp[temp.X != '-']
-        Xpos = np.array(pd.to_numeric(temp.X))
+        temp.X = pd.to_numeric(temp.X,errors = "coerce")
+        temp.Y = pd.to_numeric(temp.Y,errors = "coerce")
+        temp.Time = pd.to_numeric(temp.Time, errors = "coerce")
+        temp = temp.dropna()
+
+        Xpos = np.array(temp.X)
         Xpos = Xpos - Xpos[0]
-        Ypos = np.array(pd.to_numeric(temp.Y))
+        Ypos = np.array(temp.Y)
         Ypos = Ypos - Ypos[0]
-        time = np.array(pd.to_numeric(temp.Time))
+        time = np.array(temp.Time)
         
         # Get movement from previous frame
         Xdiff = np.diff(Xpos)
@@ -107,22 +112,10 @@ for x in xrange(First_trial_number,Last_trial_number+1):
         # Calculate percentage of time in concentric zones
         # (define radius of the zones on Zone_radius on line 16)
         Zone_percentage = list()    
-        for i in range (0,int(20/Zone_radius)):
+        for i in range (int(20/Zone_radius)):
             pct = sum((distance_to_center < float(i) * Zone_radius) / \
                       float(len(distance_to_center)))
             Zone_percentage.append(pct)
-
-        # Calculate percentage of time in concentric zones, radius = 5mm
-        Zone_percentage_5mm = list()
-        for i in range (0,40):
-            pct = sum((distance_to_center < float(i) / 2) / float(len(distance_to_center)))
-            Zone_percentage_5mm.append(pct)
-        
-#        # Calculate percentage of time in concentric zones, radius = 10mm
-#        Zone_percentage10mm = list()    
-#        for i in range (0,20):
-#            pct = sum((distance_to_center < float(i)) / float(len(distance_to_center)))
-#            Zone_percentage10mm.append(pct)
            
         # Organize output of raw data      
         Output_fieldnames = ['time', 'X1', 'Y1']    
@@ -132,7 +125,7 @@ for x in xrange(First_trial_number,Last_trial_number+1):
         Output['Y1'] = Ypos
   
         Output_subject[condition] = Output                 
-        Output_ID['%s' %x] = Output_subject
+        Output_ID[x] = Output_subject
         
         # Organize statistical outputs
         statistics = ['Excursion', 'MeanDiffX', 'MeanDiffY', 'MeanDiffCenter',
@@ -141,23 +134,39 @@ for x in xrange(First_trial_number,Last_trial_number+1):
                       'FinalAngleDeg', 'Xvar','Yvar','Q1','Q2','Q3','Q4']
         
         Stats = {}
-        for index in range(0,15):
-            Stats[statistics[index]] = round(Output_stats[index],2)
+        Output_stats = np.round(Output_stats, decimals=2)    
+        Stats = dict(zip(statistics, Output_stats))
         Stats_subject[condition] = Stats
         Stats_ID[x] = Stats_subject
-
-#        # Organize zone output (IF LIST)    
-#        Zone = []
-#        for index in range(0,len(Zone_percentage)):
-#            next_zone = round(Zone_percentage[index],3)
-#            Zone.append(next_zone)
-#        Zone_subject[condition] = Zone[1:Zones_to_display]
-#        Zone_ID[x] = Zone_subject
-
+        
         # Organize zone output    
         Zone = {}
-        for index in range(0,len(Zone_percentage)):
-            Zone[index] = round(Zone_percentage[index],3)
+        Zone_percentage = np.round(Zone_percentage, decimals=3)
+        Zone = dict(zip(range(len(Zone_percentage)),Zone_percentage))
         Zone_subject[condition] = Zone
-        Zone_ID[x] = Zone_subject
+        Zone_ID[x] = Zone_subject 
 
+# Include output in dataframe
+Condition_rep = len(Zone_ID)
+Condition = ('Closed','Open') * Condition_rep
+
+stats = pd.DataFrame.from_dict({(i,j): Stats_ID[i][j] 
+                           for i in Stats_ID.keys() 
+                           for j in Stats_ID[i].keys()},
+                                   orient='index')
+
+zones = pd.DataFrame.from_dict({(i,j): Zone_ID[i][j] 
+                           for i in Zone_ID.keys() 
+                           for j in Zone_ID[i].keys()},
+                                       orient='index')
+
+# To analyze dataframes in Python, a row with conditions should be added for
+# ease of access
+
+#stats['Condition'] = Condition
+#zones['Condition'] = Condition
+
+# Create output if set to TRUE                      
+if create_output == 'TRUE':
+    zones.to_csv('zones_analysis.csv')
+    stats.to_csv('stats_analysis.csv')
